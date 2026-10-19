@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flexbox – interaktywna karta pracy</title>
+<style>
+:root{
+  --bg:#edf4ff;
+  --card:rgba(255,255,255,.94);
+  --text:#0f2240;
+  --muted:#637896;
+  --border:#c8d8ef;
+  --accent:#2563eb;
+  --accent-dark:#1e40af;
+  --accent-soft:#dbeafe;
+  --panel:#f7fbff;
+  --shadow:0 16px 40px rgba(31,78,140,.10);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(96,165,250,.18), transparent 34%),
+    radial-gradient(circle at top right, rgba(37,99,235,.10), transparent 28%),
+    linear-gradient(180deg,#f7fbff 0%,var(--bg) 100%);
+  color:var(--text);
+  min-height:100%;
+}
+main{
+  width:min(1180px,94%);
+  margin:28px auto 56px;
+}
+h1,h2,h3{margin-top:0}
+.header{
+  background:linear-gradient(135deg,rgba(255,255,255,.98) 0%,rgba(232,243,255,.96) 100%);
+  border:1px solid rgba(162,193,232,.8);
+  border-radius:24px;
+  padding:28px;
+  margin-bottom:22px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(10px);
+}
+.meta{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:16px;
+}
+.meta input{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  font-size:15px;
+}
+.cheat{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.cheat-card{
+  background:linear-gradient(180deg,#ffffff 0%,#f6faff 100%);
+  border:1px solid rgba(183,207,237,.95);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 8px 24px rgba(38,82,140,.06);
+}
+.cheat-card code{
+  display:block;
+  background:#eaf2ff;
+  padding:8px 10px;
+  border-radius:7px;
+  margin-top:8px;
+  white-space:pre-wrap;
+}
+.section-title{margin:28px 0 10px}
+.task{
+  background:rgba(255,255,255,.96);
+  border:1px solid rgba(181,205,235,.95);
+  border-radius:22px;
+  padding:22px;
+  margin:20px 0;
+  box-shadow:0 12px 30px rgba(35,77,129,.07);
+}
+.task-grid{
+  display:grid;
+  grid-template-columns:minmax(320px,.9fr) minmax(0,1.1fr);
+  gap:16px;
+  align-items:stretch;
+}
+textarea{
+  width:100%;
+  min-height:250px;
+  resize:vertical;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+  font:15px/1.5 Consolas,Monaco,monospace;
+  background:#0f2a4d;
+  color:#f3f8ff;
+}
+.preview{
+  min-height:250px;
+  border:2px dashed var(--border);
+  border-radius:10px;
+  padding:12px;
+  background:#f7fbff;
+  overflow:auto;
+}
+.flexbox{
+  min-height:220px;
+}
+.item{
+  width:64px;
+  height:64px;
+  flex:0 0 64px;
+  border:2px solid #2f5f99;
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  background:#ffffff;
+}
+.task p{line-height:1.5}
+.task .status{
+  margin-top:8px;
+  font-size:14px;
+  color:var(--muted);
+}
+.buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:14px;
+}
+button{
+  border:0;
+  border-radius:9px;
+  padding:10px 16px;
+  font-size:15px;
+  cursor:pointer;
+  background:var(--accent);
+  color:white;
+}
+button.secondary{
+  background:#315b8a;
+}
+.report{
+  background:rgba(255,255,255,.96);
+  border:1px solid rgba(181,205,235,.95);
+  border-radius:22px;
+  padding:22px;
+  margin-top:26px;
+  box-shadow:var(--shadow);
+}
+#logTable{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  font-size:13px;
+}
+#logTable th,#logTable td{
+  border:1px solid var(--border);
+  padding:7px;
+  text-align:left;
+  vertical-align:top;
+}
+#logTable th{background:#f3f4f6}
+.note{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.5;
+}
+.print-only{display:none}
+
+.task h3{
+  display:inline-block;
+  background:#dbeafe;
+  color:#173f73;
+  border:1px solid #a9c8f2;
+  border-radius:999px;
+  padding:6px 12px;
+  margin-bottom:10px;
+}
+.header h1{color:#143d73}
+.section-title,.report h2{color:#174b88}
+
+
+.start-overlay,
+.fullscreen-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(8,31,62,.96);
+}
+.fullscreen-overlay{display:none}
+.overlay-card{
+  width:min(560px,94%);
+  background:#ffffff;
+  border:1px solid #8eb5e8;
+  border-radius:18px;
+  padding:28px;
+  text-align:center;
+  box-shadow:0 18px 60px rgba(0,0,0,.24);
+}
+.overlay-card h2{
+  color:#143d73;
+  margin-bottom:12px;
+}
+.overlay-card p{
+  color:#4d6685;
+  line-height:1.55;
+}
+.overlay-card button{
+  margin-top:14px;
+  min-width:220px;
+  font-weight:700;
+}
+.locked-editor{
+  border:1px solid var(--border);
+  border-radius:10px;
+  overflow:hidden;
+  background:#0f2a4d;
+}
+.locked-line{
+  margin:0;
+  padding:10px 14px;
+  background:#17385f;
+  color:#dbeafe;
+  font:15px/1.5 Consolas,Monaco,monospace;
+  user-select:none;
+}
+.locked-line.top{border-bottom:1px solid #315b8a}
+.locked-line.bottom{border-top:1px solid #315b8a}
+.locked-editor textarea{
+  border:0;
+  border-radius:0;
+  min-height:210px;
+  outline:none;
+}
+.locked-note{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+
+.header h1{
+  font-size:clamp(2rem,4vw,3.1rem);
+  line-height:1.05;
+  letter-spacing:-.04em;
+  margin-bottom:10px;
+  background:linear-gradient(90deg,#123b70,#2563eb);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+.header p{
+  font-size:1.02rem;
+  color:var(--muted);
+  margin-bottom:0;
+}
+.meta label{
+  font-size:.88rem;
+  font-weight:700;
+  color:#274c78;
+}
+.meta input{
+  margin-top:7px;
+  background:rgba(255,255,255,.88);
+  border:1px solid #bfd2eb;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+}
+.cheat-card strong{
+  color:#174b88;
+  font-size:.95rem;
+}
+.cheat-card code{
+  background:linear-gradient(180deg,#edf5ff,#e7f1ff);
+  border:1px solid #d3e2f6;
+  color:#173c69;
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+}
+.section-title{
+  font-size:1.65rem;
+  letter-spacing:-.02em;
+}
+.task h3{
+  background:linear-gradient(180deg,#eaf3ff,#dcecff);
+  color:#174b88;
+  border:1px solid #bdd4f0;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9);
+}
+.task p{
+  color:#35506f;
+}
+.preview{
+  background:
+    linear-gradient(#f8fbff,#f8fbff) padding-box,
+    linear-gradient(135deg,#8eb9ef,#d3e4f9) border-box;
+  border:2px solid transparent;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.8);
+}
+.item{
+  border:1px solid #7fa7d7;
+  background:linear-gradient(180deg,#ffffff,#edf5ff);
+  color:#174b88;
+  box-shadow:0 6px 16px rgba(60,102,154,.10);
+}
+.locked-editor{
+  border:1px solid #173e6b;
+  border-radius:16px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#0f2745,#112f53);
+  box-shadow:0 12px 28px rgba(15,42,77,.18);
+}
+.locked-line{
+  background:#15375f;
+  color:#cfe5ff;
+  border-color:#315b8a;
+}
+.locked-editor textarea{
+  background:#0f2a4d;
+  color:#f5f9ff;
+  min-height:210px;
+  padding:16px;
+}
+.locked-editor textarea::selection{
+  background:#315f99;
+}
+.locked-note{
+  padding-left:2px;
+}
+button{
+  background:linear-gradient(180deg,#2f6ee6,#1d4ed8);
+  box-shadow:0 8px 18px rgba(37,99,235,.20);
+  transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  font-weight:700;
+}
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(37,99,235,.26);
+  filter:saturate(1.04);
+}
+button:active{transform:translateY(0)}
+#logTable{
+  overflow:hidden;
+  border-radius:12px;
+}
+#logTable th{
+  background:#eaf3ff;
+  color:#174b88;
+}
+.overlay-card{
+  border-radius:24px;
+  border:1px solid #a6c6eb;
+  box-shadow:0 28px 80px rgba(0,0,0,.28);
+}
+
+@media(max-width:850px){
+  .meta,.cheat,.task-grid{grid-template-columns:1fr}
+}
+@media print{
+  body{background:white}
+  main{width:100%;margin:0}
+  .no-print{display:none!important}
+  .print-only{display:block}
+  .header,.cheat-card,.task,.report{break-inside:avoid}
+  textarea{
+    background:white!important;
+    color:black!important;
+    border:1px solid #999;
+    min-height:180px;
+  }
+  .preview{min-height:180px}
+}
+</style>
+</head>
+<body>
+
+<div id="startOverlay" class="start-overlay">
+  <div class="overlay-card">
+    <h2>Flexbox – karta pracy</h2>
+    <p>Po rozpoczęciu strona przejdzie do trybu pełnoekranowego. Wyjście z pełnego ekranu, zmiana karty, kopiowanie i wklejanie są rejestrowane w raporcie.</p>
+    <button id="startWorkBtn" type="button">Rozpocznij pracę</button>
+  </div>
+</div>
+
+<div id="fullscreenOverlay" class="fullscreen-overlay">
+  <div class="overlay-card">
+    <h2>Opuściłeś tryb pełnoekranowy</h2>
+    <p>Zdarzenie zostało zapisane w raporcie. Aby kontynuować pracę, wróć do pełnego ekranu.</p>
+    <button id="returnFullscreenBtn" type="button">Wróć do pełnego ekranu</button>
+  </div>
+</div>
+
+<main>
+  <section class="header">
+    <h1>Flexbox – interaktywna karta pracy</h1>
+    <p>Wpisuj właściwości CSS samodzielnie. Podgląd po prawej aktualizuje się natychmiast. Na wykonanie wszystkich zadań masz około <b>45 minut</b>.</p>
+    <div class="meta">
+      <label>Imię i nazwisko
+        <input id="studentName" type="text" placeholder="np. Jan Kowalski">
+      </label>
+      <label>Klasa
+        <input id="studentClass" type="text" placeholder="np. 2TI">
+      </label>
+      <label>Data
+        <input id="dateField" type="text" readonly>
+      </label>
+    </div>
+  </section>
+
+  <h2>Ściąga – najważniejsze właściwości Flexboxa</h2>
+  <section class="cheat">
+    <div class="cheat-card">
+      <strong>Włączenie Flexboxa</strong>
+      <code>display: flex;</code>
+    </div>
+    <div class="cheat-card">
+      <strong>Kierunek elementów</strong>
+      <code>flex-direction: row;
+flex-direction: column;
+flex-direction: row-reverse;
+flex-direction: column-reverse;</code>
+    </div>
+    <div class="cheat-card">
+      <strong>Ułożenie w osi głównej</strong>
+      <code>justify-content: flex-start;
+justify-content: center;
+justify-content: flex-end;
+justify-content: space-between;
+justify-content: space-around;
+justify-content: space-evenly;</code>
+    </div>
+    <div class="cheat-card">
+      <strong>Ułożenie w osi poprzecznej</strong>
+      <code>align-items: flex-start;
+align-items: center;
+align-items: flex-end;
+align-items: stretch;</code>
+    </div>
+    <div class="cheat-card">
+      <strong>Odstęp między elementami</strong>
+      <code>gap: 20px;</code>
+    </div>
+    <div class="cheat-card">
+      <strong>Zawijanie elementów</strong>
+      <code>flex-wrap: nowrap;
+flex-wrap: wrap;</code>
+    </div>
+  </section>
+
+  <h2 class="section-title">Zadania</h2>
+  <p class="note">Wykonuj zadania po kolei. Nie korzystaj z gotowego kodu z innych źródeł. Wszystkie zdarzenia kopiowania, wklejania i opuszczania strony są zapisywane w raporcie na końcu.</p>
+
+
+  <section class="task" data-task="1">
+    <h3>Zadanie 1</h3>
+    <p>Ustaw 5 kafelków w jednym rzędzie. Wyśrodkuj je poziomo i pionowo. Ustaw odstęp <b>20px</b>.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div><div class="item">5</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="2">
+    <h3>Zadanie 2</h3>
+    <p>Ustaw elementy <b>pionowo</b>. Umieść je na środku w poziomie. Ustaw odstęp <b>10px</b>.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">A</div><div class="item">B</div><div class="item">C</div><div class="item">D</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="3">
+    <h3>Zadanie 3</h3>
+    <p>Rozłóż elementy tak, aby pierwszy był przy lewej krawędzi, ostatni przy prawej, a pozostałe miały równe odstępy między sobą.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="4">
+    <h3>Zadanie 4</h3>
+    <p>Ustaw elementy w jednym rzędzie i rozmieść je tak, aby po obu stronach każdego elementu pojawiła się przestrzeń. Wyśrodkuj elementy w pionie.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="5">
+    <h3>Zadanie 5</h3>
+    <p>Odwróć kolejność elementów w poziomie i ustaw odstęp <b>15px</b>. Elementy mają znajdować się przy lewej stronie podglądu.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div><div class="item">5</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="6">
+    <h3>Zadanie 6</h3>
+    <p>Ustaw elementy pionowo w odwrotnej kolejności. Całą kolumnę ustaw przy prawej krawędzi kontenera. Dodaj odstęp <b>12px</b>.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">A</div><div class="item">B</div><div class="item">C</div><div class="item">D</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="7">
+    <h3>Zadanie 7</h3>
+    <p>Włącz zawijanie elementów do kolejnych wierszy. Ustaw odstęp <b>12px</b>. Następnie zmniejsz szerokość okna przeglądarki i obserwuj, co się dzieje.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div><div class="item">5</div><div class="item">6</div><div class="item">7</div><div class="item">8</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="8">
+    <h3>Zadanie 8</h3>
+    <p>Włącz zawijanie. Wyśrodkuj wszystkie rzędy elementów w poziomie. Ustaw odstęp <b>16px</b> między elementami.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div><div class="item">5</div><div class="item">6</div><div class="item">7</div><div class="item">8</div><div class="item">9</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="9">
+    <h3>Zadanie 9</h3>
+    <p>Ustaw elementy w wierszu. Rozmieść je równomiernie tak, aby odstępy pomiędzy elementami i od krawędzi były takie same. Wyśrodkuj elementy pionowo.</p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">HTML</div><div class="item">CSS</div><div class="item">JS</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="task" data-task="10">
+    <h3>Zadanie 10 – podsumowanie</h3>
+    <p>Ustaw 8 elementów tak, aby mogły przechodzić do kolejnych wierszy. Elementy mają być wyśrodkowane w poziomie i pionie, a odstęp między nimi ma wynosić <b>18px</b>.</p>
+    <p><b>W tym zadaniu spróbuj wykonać wszystko bez zaglądania do ściągi.</b></p>
+    <div class="task-grid">
+      <div>
+        <div class="locked-editor"><pre class="locked-line top">.kontener {
+  display: flex;</pre><textarea class="editor"></textarea><pre class="locked-line bottom">}</pre></div><div class="locked-note">Fragmenty .kontener {, display: flex; oraz } są zablokowane i nie można ich usunąć.</div>
+        <div class="status">Kod działa na żywo.</div>
+      </div>
+      <div class="preview">
+        <div class="flexbox kontener">
+          <div class="item">1</div><div class="item">2</div><div class="item">3</div><div class="item">4</div><div class="item">5</div><div class="item">6</div><div class="item">7</div><div class="item">8</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="report">
+    <h2>Raport aktywności</h2>
+    <p class="note">Rejestrowane są zdarzenia możliwe do wykrycia przez przeglądarkę: zmiana widoczności karty, utrata fokusu okna, kopiowanie, wklejanie, wycinanie, użycie menu kontekstowego i rozpoczęcie drukowania. Raport nie jest dowodem ściągania sam w sobie — pokazuje tylko zdarzenia techniczne.</p>
+    <table id="logTable">
+      <thead><tr><th>#</th><th>Czas</th><th>Zdarzenie</th><th>Szczegóły</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="buttons no-print">
+      <button id="printBtn">Drukuj / zapisz jako PDF</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const allowedProps = new Set([
+    'flex-direction','justify-content','align-items','gap',
+    'flex-wrap','align-content','row-gap','column-gap'
+  ]);
+
+  const log = [];
+  const tbody = document.querySelector('#logTable tbody');
+  const start = Date.now();
+
+  document.getElementById('dateField').value = new Date().toLocaleDateString('pl-PL');
+
+  const startOverlay = document.getElementById('startOverlay');
+  const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+  const startWorkBtn = document.getElementById('startWorkBtn');
+  const returnFullscreenBtn = document.getElementById('returnFullscreenBtn');
+  let workStarted = false;
+  let intentionalPrintExit = false;
+
+  async function enterFullscreen(){
+    try{
+      if(!document.fullscreenElement && document.documentElement.requestFullscreen){
+        await document.documentElement.requestFullscreen();
+      }
+      return !!document.fullscreenElement;
+    }catch(err){
+      addLog('BŁĄD PEŁNEGO EKRANU', 'Przeglądarka nie pozwoliła uruchomić trybu pełnoekranowego.');
+      return false;
+    }
+  }
+
+  startWorkBtn.addEventListener('click', async ()=>{
+    workStarted = true;
+    addLog('ROZPOCZĘCIE PRACY','Uczeń uruchomił kartę pracy.');
+    await enterFullscreen();
+    startOverlay.style.display = 'none';
+    if(!document.fullscreenElement){
+      fullscreenOverlay.style.display = 'flex';
+    }
+  });
+
+  returnFullscreenBtn.addEventListener('click', async ()=>{
+    const ok = await enterFullscreen();
+    if(ok){
+      fullscreenOverlay.style.display = 'none';
+      addLog('POWRÓT DO PEŁNEGO EKRANU','Uczeń ponownie uruchomił tryb pełnoekranowy.');
+    }
+  });
+
+  document.addEventListener('fullscreenchange', ()=>{
+    if(!workStarted) return;
+    if(document.fullscreenElement){
+      fullscreenOverlay.style.display = 'none';
+    }else if(!intentionalPrintExit){
+      addLog('WYJŚCIE Z PEŁNEGO EKRANU','Uczeń opuścił tryb pełnoekranowy.');
+      fullscreenOverlay.style.display = 'flex';
+    }
+  });
+
+  function nowText(){
+    return new Date().toLocaleTimeString('pl-PL');
+  }
+
+  function addLog(type, details=''){
+    log.push({time:nowText(), type, details});
+    renderLog();
+  }
+
+  function renderLog(){
+    tbody.innerHTML = '';
+    log.forEach((e,i)=>{
+      const tr = document.createElement('tr');
+      [i+1,e.time,e.type,e.details].forEach(v=>{
+        const td = document.createElement('td');
+        td.textContent = v;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function applyCss(task){
+    const editor = task.querySelector('.editor');
+    const container = task.querySelector('.kontener');
+    const status = task.querySelector('.status');
+
+    // Edytor przyjmuje wyłącznie deklaracje CSS wewnątrz chronionego bloku .kontener.
+    let cleaned = editor.value
+      .replace(/[{}]/g,'')
+      .replace(/\.kontener/gi,'')
+      .replace(/(^|\n)\s*display\s*:[^;\n]*;?/gi,'$1');
+    if(cleaned !== editor.value){
+      editor.value = cleaned;
+      addLog('PRÓBA ZMIANY KODU CHRONIONEGO', `Zadanie ${task.dataset.task}: próba zmiany chronionego fragmentu (.kontener / display:flex / nawiasy).`);
+    }
+
+    const props = [
+      'flex-direction','justify-content','align-items','gap',
+      'flex-wrap','align-content','row-gap','column-gap'
+    ];
+    props.forEach(p=>container.style.removeProperty(p));
+    container.style.setProperty('display','flex');
+
+    const txt = editor.value;
+
+    let count = 0, ignored = 0;
+    txt.split(';').forEach(decl=>{
+      const idx = decl.indexOf(':');
+      if(idx === -1) return;
+      const prop = decl.slice(0,idx).trim().toLowerCase();
+      const value = decl.slice(idx+1).trim();
+      if(!prop || !value) return;
+      if(!allowedProps.has(prop)){ ignored++; return; }
+      container.style.setProperty(prop,value);
+      count++;
+    });
+    status.textContent = ignored
+      ? `Zastosowano ${count} właściwości. Pominięto ${ignored}.`
+      : `Zastosowano ${count} właściwości.`;
+  }
+
+  document.querySelectorAll('.task').forEach(task=>{
+    const ed = task.querySelector('.editor');
+    ed.addEventListener('input',()=>applyCss(task));
+    applyCss(task);
+
+    ['copy','paste','cut'].forEach(type=>{
+      ed.addEventListener(type, e=>{
+        addLog(type.toUpperCase(), `Zadanie ${task.dataset.task}`);
+      });
+    });
+
+    ed.addEventListener('contextmenu',()=>{
+      addLog('MENU KONTEKSTOWE', `Zadanie ${task.dataset.task}`);
+    });
+  });
+
+  document.addEventListener('visibilitychange',()=>{
+    addLog(
+      document.hidden ? 'ZMIANA KARTY / UKRYCIE STRONY' : 'POWRÓT DO STRONY',
+      document.hidden ? 'Strona przestała być widoczna.' : 'Strona ponownie widoczna.'
+    );
+  });
+
+  window.addEventListener('blur',()=>{
+    addLog('UTRATA FOKUSU OKNA','Okno przeglądarki straciło fokus.');
+  });
+
+  window.addEventListener('focus',()=>{
+    addLog('POWRÓT FOKUSU','Okno przeglądarki odzyskało fokus.');
+  });
+
+  window.addEventListener('beforeprint',()=>{
+    intentionalPrintExit = true;
+    addLog('DRUKOWANIE / PDF','Rozpoczęto drukowanie lub zapis do PDF.');
+  });
+
+  window.addEventListener('afterprint',()=>{
+    intentionalPrintExit = false;
+  });
+
+  document.addEventListener('keydown', e=>{
+    const k = e.key.toLowerCase();
+    if((e.ctrlKey || e.metaKey) && ['c','v','x','a','p'].includes(k)){
+      const map = {c:'Ctrl/Cmd+C',v:'Ctrl/Cmd+V',x:'Ctrl/Cmd+X',a:'Ctrl/Cmd+A',p:'Ctrl/Cmd+P'};
+      addLog('SKRÓT KLAWIATUROWY', map[k]);
+    }
+  });
+
+  document.getElementById('printBtn').addEventListener('click', async ()=>{
+    addLog('PRZYCISK PDF','Kliknięto przycisk Drukuj / zapisz jako PDF.');
+    intentionalPrintExit = true;
+    try{
+      if(document.fullscreenElement && document.exitFullscreen){
+        await document.exitFullscreen();
+      }
+    }catch(e){}
+    setTimeout(()=>window.print(),100);
+  });
+
+  addLog('OTWARCIE STRONY','Załadowano kartę pracy.');
+})();
+</script>
+</body>
+</html>
