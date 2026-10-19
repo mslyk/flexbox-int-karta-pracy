@@ -148,27 +148,6 @@ button{
 button.secondary{
   background:#315b8a;
 }
-.report{
-  background:rgba(255,255,255,.96);
-  border:1px solid rgba(181,205,235,.95);
-  border-radius:22px;
-  padding:22px;
-  margin-top:26px;
-  box-shadow:var(--shadow);
-}
-#logTable{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-  font-size:13px;
-}
-#logTable th,#logTable td{
-  border:1px solid var(--border);
-  padding:7px;
-  text-align:left;
-  vertical-align:top;
-}
-#logTable th{background:#f3f4f6}
 .note{
   color:var(--muted);
   font-size:13px;
@@ -350,14 +329,6 @@ button:hover{
   filter:saturate(1.04);
 }
 button:active{transform:translateY(0)}
-#logTable{
-  overflow:hidden;
-  border-radius:12px;
-}
-#logTable th{
-  background:#eaf3ff;
-  color:#174b88;
-}
 .overlay-card{
   border-radius:24px;
   border:1px solid #a6c6eb;
@@ -398,20 +369,6 @@ button:active{transform:translateY(0)}
   transform:none;
 }
 
-@media print{
-  body{background:white}
-  main{width:100%;margin:0}
-  .no-print{display:none!important}
-  .print-only{display:block}
-  .header,.cheat-card,.task,.report{break-inside:avoid}
-  textarea{
-    background:white!important;
-    color:black!important;
-    border:1px solid #999;
-    min-height:180px;
-  }
-  .preview{min-height:180px}
-}
 </style>
 </head>
 <body>
@@ -419,7 +376,7 @@ button:active{transform:translateY(0)}
 <div id="startOverlay" class="start-overlay">
   <div class="overlay-card">
     <h2>Flexbox – karta pracy</h2>
-    <p>Po rozpoczęciu strona przejdzie do trybu pełnoekranowego. Wyjście z pełnego ekranu, zmiana karty, kopiowanie i wklejanie są rejestrowane w raporcie.</p>
+    <p>Po rozpoczęciu strona przejdzie do trybu pełnoekranowego. Wyjście z pełnego ekranu, zmiana karty, kopiowanie i wklejanie są rejestrowane.</p>
     <button id="startWorkBtn" type="button">Rozpocznij pracę</button>
   </div>
 </div>
@@ -673,18 +630,6 @@ flex-wrap: wrap;</code>
     </div>
     <div id="sendStatus" class="send-status" aria-live="polite"></div>
   </section>
-
-  <section class="report">
-    <h2>Raport aktywności</h2>
-    <p class="note">Rejestrowane są zdarzenia możliwe do wykrycia przez przeglądarkę: zmiana widoczności karty, utrata fokusu okna, kopiowanie, wklejanie, wycinanie, użycie menu kontekstowego i rozpoczęcie drukowania. Raport nie jest dowodem ściągania sam w sobie — pokazuje tylko zdarzenia techniczne.</p>
-    <table id="logTable">
-      <thead><tr><th>#</th><th>Czas</th><th>Zdarzenie</th><th>Szczegóły</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <div class="buttons no-print">
-      <button id="printBtn">Drukuj / zapisz jako PDF</button>
-    </div>
-  </section>
 </main>
 
 <script>
@@ -695,7 +640,6 @@ flex-wrap: wrap;</code>
   ]);
 
   const log = [];
-  const tbody = document.querySelector('#logTable tbody');
   const start = Date.now();
 
   document.getElementById('dateField').value = new Date().toLocaleDateString('pl-PL');
@@ -705,7 +649,6 @@ flex-wrap: wrap;</code>
   const startWorkBtn = document.getElementById('startWorkBtn');
   const returnFullscreenBtn = document.getElementById('returnFullscreenBtn');
   let workStarted = false;
-  let intentionalPrintExit = false;
 
   async function enterFullscreen(){
     try{
@@ -741,7 +684,7 @@ flex-wrap: wrap;</code>
     if(!workStarted) return;
     if(document.fullscreenElement){
       fullscreenOverlay.style.display = 'none';
-    }else if(!intentionalPrintExit){
+    }else{
       addLog('WYJŚCIE Z PEŁNEGO EKRANU','Uczeń opuścił tryb pełnoekranowy.');
       fullscreenOverlay.style.display = 'flex';
     }
@@ -753,20 +696,6 @@ flex-wrap: wrap;</code>
 
   function addLog(type, details=''){
     log.push({time:nowText(), type, details});
-    renderLog();
-  }
-
-  function renderLog(){
-    tbody.innerHTML = '';
-    log.forEach((e,i)=>{
-      const tr = document.createElement('tr');
-      [i+1,e.time,e.type,e.details].forEach(v=>{
-        const td = document.createElement('td');
-        td.textContent = v;
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
   }
 
   function applyCss(task){
@@ -840,32 +769,12 @@ flex-wrap: wrap;</code>
     addLog('POWRÓT FOKUSU','Okno przeglądarki odzyskało fokus.');
   });
 
-  window.addEventListener('beforeprint',()=>{
-    intentionalPrintExit = true;
-    addLog('DRUKOWANIE / PDF','Rozpoczęto drukowanie lub zapis do PDF.');
-  });
-
-  window.addEventListener('afterprint',()=>{
-    intentionalPrintExit = false;
-  });
-
   document.addEventListener('keydown', e=>{
     const k = e.key.toLowerCase();
     if((e.ctrlKey || e.metaKey) && ['c','v','x','a','p'].includes(k)){
       const map = {c:'Ctrl/Cmd+C',v:'Ctrl/Cmd+V',x:'Ctrl/Cmd+X',a:'Ctrl/Cmd+A',p:'Ctrl/Cmd+P'};
       addLog('SKRÓT KLAWIATUROWY', map[k]);
     }
-  });
-
-  document.getElementById('printBtn').addEventListener('click', async ()=>{
-    addLog('PRZYCISK PDF','Kliknięto przycisk Drukuj / zapisz jako PDF.');
-    intentionalPrintExit = true;
-    try{
-      if(document.fullscreenElement && document.exitFullscreen){
-        await document.exitFullscreen();
-      }
-    }catch(e){}
-    setTimeout(()=>window.print(),100);
   });
 
 
@@ -933,7 +842,7 @@ flex-wrap: wrap;</code>
       workSent = true;
       setEditorsLocked(true);
       sendBtn.textContent = '✓ Praca wysłana';
-      sendStatus.textContent = 'Praca została wysłana do nauczyciela. Możesz teraz zapisać stronę jako PDF.';
+      sendStatus.textContent = 'Praca została wysłana do nauczyciela.';
       sendStatus.className = 'send-status ok';
       addLog('PRACA WYSŁANA','Serwer potwierdził wysłanie pracy.');
 
