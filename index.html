@@ -367,6 +367,37 @@ button:active{transform:translateY(0)}
 @media(max-width:850px){
   .meta,.cheat,.task-grid{grid-template-columns:1fr}
 }
+
+.send-panel{
+  margin-top:24px;
+  padding:22px;
+  border-radius:22px;
+  border:1px solid rgba(181,205,235,.95);
+  background:linear-gradient(180deg,#ffffff 0%,#edf5ff 100%);
+  box-shadow:var(--shadow);
+}
+.send-panel h2{
+  margin-bottom:8px;
+  color:#174b88;
+}
+.send-panel p{
+  color:#58708f;
+  line-height:1.55;
+}
+.send-status{
+  margin-top:12px;
+  font-weight:700;
+  min-height:22px;
+}
+.send-status.ok{color:#166534}
+.send-status.err{color:#b91c1c}
+.send-status.info{color:#174b88}
+#sendBtn[disabled]{
+  opacity:.65;
+  cursor:not-allowed;
+  transform:none;
+}
+
 @media print{
   body{background:white}
   main{width:100%;margin:0}
@@ -633,6 +664,16 @@ flex-wrap: wrap;</code>
     </div>
   </section>
 
+
+  <section class="send-panel">
+    <h2>Zakończenie pracy</h2>
+    <p>Po zakończeniu kliknij przycisk poniżej. Twoje odpowiedzi i raport aktywności zostaną wysłane do nauczyciela.</p>
+    <div class="buttons no-print">
+      <button id="sendBtn" type="button">Zakończ i wyślij pracę</button>
+    </div>
+    <div id="sendStatus" class="send-status" aria-live="polite"></div>
+  </section>
+
   <section class="report">
     <h2>Raport aktywności</h2>
     <p class="note">Rejestrowane są zdarzenia możliwe do wykrycia przez przeglądarkę: zmiana widoczności karty, utrata fokusu okna, kopiowanie, wklejanie, wycinanie, użycie menu kontekstowego i rozpoczęcie drukowania. Raport nie jest dowodem ściągania sam w sobie — pokazuje tylko zdarzenia techniczne.</p>
@@ -826,6 +867,85 @@ flex-wrap: wrap;</code>
     }catch(e){}
     setTimeout(()=>window.print(),100);
   });
+
+
+  const sendBtn = document.getElementById('sendBtn');
+  const sendStatus = document.getElementById('sendStatus');
+  let workSent = false;
+
+  function setEditorsLocked(locked){
+    document.querySelectorAll('.editor').forEach(editor=>{
+      editor.disabled = locked;
+    });
+    document.getElementById('studentName').disabled = locked;
+    document.getElementById('studentClass').disabled = locked;
+  }
+
+  sendBtn.addEventListener('click', async ()=>{
+    if(workSent) return;
+
+    const studentName = document.getElementById('studentName').value.trim();
+    const studentClass = document.getElementById('studentClass').value.trim();
+
+    if(!studentName || !studentClass){
+      sendStatus.textContent = 'Wpisz imię i nazwisko oraz klasę.';
+      sendStatus.className = 'send-status err';
+      return;
+    }
+
+    addLog('ZAKOŃCZENIE PRACY','Uczeń kliknął „Zakończ i wyślij pracę”.');
+
+    const tasks = [...document.querySelectorAll('.editor')].map((editor, index)=>{
+      const body = editor.value.trim();
+      return `.kontener {\n  display: flex;${body ? '\n' + body : ''}\n}`;
+    });
+
+    const payload = {
+      studentName,
+      studentClass,
+      startTime: new Date(start).toLocaleString('pl-PL'),
+      endTime: new Date().toLocaleString('pl-PL'),
+      tasks,
+      log
+    };
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Wysyłanie...';
+    sendStatus.textContent = 'Trwa wysyłanie pracy...';
+    sendStatus.className = 'send-status info';
+
+    try{
+      const response = await fetch('/api/send',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+      });
+
+      let data = {};
+      try{
+        data = await response.json();
+      }catch(e){}
+
+      if(!response.ok){
+        throw new Error(data.error || 'Nie udało się wysłać pracy.');
+      }
+
+      workSent = true;
+      setEditorsLocked(true);
+      sendBtn.textContent = '✓ Praca wysłana';
+      sendStatus.textContent = 'Praca została wysłana do nauczyciela. Możesz teraz zapisać stronę jako PDF.';
+      sendStatus.className = 'send-status ok';
+      addLog('PRACA WYSŁANA','Serwer potwierdził wysłanie pracy.');
+
+    }catch(error){
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Zakończ i wyślij pracę';
+      sendStatus.textContent = 'Nie udało się wysłać pracy. Sprawdź połączenie i spróbuj ponownie.';
+      sendStatus.className = 'send-status err';
+      addLog('BŁĄD WYSYŁKI', error && error.message ? error.message : 'Nieznany błąd.');
+    }
+  });
+
 
   addLog('OTWARCIE STRONY','Załadowano kartę pracy.');
 })();
